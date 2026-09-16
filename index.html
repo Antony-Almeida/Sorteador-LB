@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteador de Nomes - LB</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #00995D; 
+            --primary-dark: #007A4A;
+            --accent-color: #F37021; /* Laranja de destaque, opcional */
+            --background: #f4f7f6;
+            --text-dark: #333333;
+            --text-light: #ffffff;
+            --border-radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .logos-header {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--text-light);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .logo-placeholder {
+            height: 100px;
+            width: auto;
+            min-width: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            border-radius: 12px;
+        }
+
+        .logo-placeholder img {
+            max-height: 130%;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .main-container {
+            background-color: var(--text-light);
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 1100px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        @media (min-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+        }
+
+        .input-group {
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="file"]:hover {
+            border-color: var(--primary-color);
+        }
+
+        .status {
+            font-size: 0.85rem;
+            margin-top: 8px;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--text-light);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .result-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .current-winner-area {
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid var(--primary-color);
+            border-radius: var(--border-radius);
+            background-color: #f0fdf6;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .result-title {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .winner-name {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-dark);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            word-break: break-word;
+        }
+
+        .winner-name.show {
+            opacity: 1;
+        }
+
+        /* Histórico de Sorteados */
+        .history-area {
+            background-color: #fafafa;
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            flex-grow: 1;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .history-area h3 {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .history-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-list li {
+            background-color: var(--text-light);
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid var(--primary-color);
+            font-size: 0.95rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: #d9534f;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ESPAÇO PARA AS LOGOS -->
+    <header class="logos-header">
+        
+        <div class="logo-placeholder">
+            <img src="Imagens/Logo unimed.png" alt="Unimed">
+        </div>
+
+        <div class="logo-placeholder">
+            <img src="Imagens/Logo Sebrae.png" alt="Sebrae">
+        </div>
+        
+        <div class="logo-placeholder">
+            <img src="Imagens/Logo OCB.png" alt="Sistema OCB/PB">
+        </div>
+
+        <div class="logo-placeholder">
+            <img src="Imagens/Logo Sicoob.png" alt="Sicoob">
+        </div>
+
+    </header>
+
+    <main class="main-container">
+        
+        <div class="control-panel">
+            <h1>Sorteador LB</h1>
+            
+            <div class="input-group">
+                <label for="fileInput">1. Carregue a Planilha (.xlsx ou .csv):</label>
+                <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" aria-label="Upload de planilha">
+                <div id="fileStatus" class="status">Nenhuma planilha carregada.</div>
+                <div id="errorMessage" class="error-message"></div>
+            </div>
+
+            <button id="btnSortear" disabled>Sortear Ganhador</button>
+        </div>
+
+        <div class="result-panel">
+            
+            <div class="current-winner-area" aria-live="polite">
+                <div class="result-title">O SORTEADO FOI:</div>
+                <div id="loader" class="loader"></div>
+                <div id="winnerName" class="winner-name">---</div>
+            </div>
+
+            <div class="history-area">
+                <h3>Últimos Sorteados</h3>
+                <ul id="historyList" class="history-list">
+                    <!-- Os nomes aparecerão aqui via JavaScript -->
+                </ul>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let nomesDisponiveis = [];
+        let contadorSorteios = 1;
+
+        const fileInput = document.getElementById('fileInput');
+        const fileStatus = document.getElementById('fileStatus');
+        const errorMessage = document.getElementById('errorMessage');
+        const btnSortear = document.getElementById('btnSortear');
+        const winnerName = document.getElementById('winnerName');
+        const loader = document.getElementById('loader');
+        const historyList = document.getElementById('historyList');
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    
+                    nomesDisponiveis = json.map(row => row[0])
+                                           .filter(nome => nome !== undefined && nome !== null && nome.toString().trim() !== '');
+
+                    if (nomesDisponiveis.length > 0) {
+                        fileStatus.textContent = `${nomesDisponiveis.length} nomes carregados para sorteio.`;
+                        fileStatus.style.color = "var(--primary-color)";
+                        errorMessage.style.display = "none";
+                        btnSortear.disabled = false;
+                        
+                        // Reseta a interface ao carregar nova planilha
+                        winnerName.textContent = "---";
+                        winnerName.classList.remove('show');
+                        historyList.innerHTML = ""; 
+                        contadorSorteios = 1;
+
+                    } else {
+                        throw new Error("A planilha está vazia ou não possui dados na primeira coluna.");
+                    }
+                } catch (error) {
+                    showError("Erro ao ler arquivo: " + error.message);
+                    btnSortear.disabled = true;
+                    nomesDisponiveis = [];
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        });
+
+        btnSortear.addEventListener('click', () => {
+            if (nomesDisponiveis.length === 0) {
+                showError("Todos os nomes já foram sorteados!");
+                btnSortear.disabled = true;
+                return;
+            }
+
+            btnSortear.disabled = true;
+            winnerName.classList.remove('show');
+            winnerName.style.display = 'none';
+            loader.style.display = 'block';
+            errorMessage.style.display = "none";
+
+            setTimeout(() => {
+                const randomIndex = Math.floor(Math.random() * nomesDisponiveis.length);
+                const ganhador = nomesDisponiveis[randomIndex];
+
+                nomesDisponiveis.splice(randomIndex, 1);
+                fileStatus.textContent = `Restam ${nomesDisponiveis.length} nomes a serem sorteados.`;
+
+                loader.style.display = 'none';
+                winnerName.style.display = 'block';
+                winnerName.textContent = ganhador;
+                
+                void winnerName.offsetWidth; // Força animação
+                winnerName.classList.add('show');
+
+                // Adiciona ao histórico (no topo da lista)
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `<strong>${contadorSorteios}º:</strong> ${ganhador}`;
+                historyList.prepend(listItem);
+                contadorSorteios++;
+
+                if (nomesDisponiveis.length > 0) {
+                    btnSortear.disabled = false;
+                } else {
+                    fileStatus.textContent = "Sorteio finalizado! Todos os nomes foram sorteados.";
+                }
+            }, 1200); 
+        });
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.style.display = "block";
+            fileStatus.textContent = "";
+        }
+    </script>
+</body>
+</html>
